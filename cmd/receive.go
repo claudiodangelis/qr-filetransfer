@@ -2,14 +2,13 @@ package cmd
 
 import (
 	"github.com/claudiodangelis/qrcp/config"
-	"github.com/claudiodangelis/qrcp/logger"
 	"github.com/claudiodangelis/qrcp/qr"
 	"github.com/claudiodangelis/qrcp/server"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func receiveCmdFunc(command *cobra.Command, args []string) error {
-	log := logger.New(quietFlag)
 	// Load configuration
 	configOptions := config.Options{
 		Interface:         interfaceFlag,
@@ -21,19 +20,19 @@ func receiveCmdFunc(command *cobra.Command, args []string) error {
 	}
 	cfg, err := config.New(configFlag, configOptions)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 	// Create the server
 	srv, err := server.New(&cfg)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 	// Sets the output directory
 	if err := srv.ReceiveTo(outputFlag); err != nil {
-		return err
+		log.Fatal(err)
 	}
 	// Prints the URL to scan to screen
-	log.Print("Scan the following URL with a QR reader to start the file transfer:")
+	log.Info("Scan the following URL with a QR reader to start the file transfer:")
 	log.Print(srv.ReceiveURL)
 	// Renders the QR
 	qr.RenderString(srv.ReceiveURL)
@@ -41,7 +40,7 @@ func receiveCmdFunc(command *cobra.Command, args []string) error {
 		srv.DisplayQR(srv.ReceiveURL)
 	}
 	if err := srv.Wait(); err != nil {
-		return err
+		log.Fatal(err)
 	}
 	return nil
 }

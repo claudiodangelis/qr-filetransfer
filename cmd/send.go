@@ -2,19 +2,18 @@ package cmd
 
 import (
 	"github.com/claudiodangelis/qrcp/config"
-	"github.com/claudiodangelis/qrcp/logger"
 	"github.com/claudiodangelis/qrcp/payload"
 	"github.com/claudiodangelis/qrcp/qr"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/claudiodangelis/qrcp/server"
 	"github.com/spf13/cobra"
 )
 
 func sendCmdFunc(command *cobra.Command, args []string) error {
-	log := logger.New(quietFlag)
 	payload, err := payload.FromArgs(args, zipFlag)
 	if err != nil {
-		return err
+		log.Error(err)
 	}
 	// Load configuration
 	configOptions := config.Options{
@@ -27,15 +26,17 @@ func sendCmdFunc(command *cobra.Command, args []string) error {
 	}
 	cfg, err := config.New(configFlag, configOptions)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 	srv, err := server.New(&cfg)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 	// Sets the payload
 	srv.Send(payload)
-	log.Print("Scan the following URL with a QR reader to start the file transfer:")
+	log.WithFields(log.Fields{
+		"File(s) Selected": args,
+	}).Info("Scan the following URL with a QR reader to start the file transfer:")
 	log.Print(srv.SendURL)
 	qr.RenderString(srv.SendURL)
 	if browserFlag {
@@ -43,7 +44,8 @@ func sendCmdFunc(command *cobra.Command, args []string) error {
 	}
 
 	if err := srv.Wait(); err != nil {
-		return err
+		log.Fatal(err)
+
 	}
 	return nil
 }
