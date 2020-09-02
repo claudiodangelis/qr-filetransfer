@@ -2,11 +2,13 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/claudiodangelis/qrcp/qr"
 	"image/jpeg"
 	"io"
 	"log"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"os"
@@ -16,6 +18,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/claudiodangelis/qrcp/config"
 	"github.com/claudiodangelis/qrcp/pages"
@@ -87,6 +90,49 @@ func (s Server) Wait() error {
 	return nil
 }
 
+func receiveFile(
+	app *Server,
+	part *multipart.Part,
+	filenames []string,
+	progressBar *pb.ProgressBar,
+) (string, error) {
+	// Prepare the destination
+	fileName := getFileName(part.FileName(), filenames)
+	out, err := os.Create(filepath.Join(app.outputDir, fileName))
+	if err != nil {
+		// Output to server
+		msg := fmt.Sprintf("Unable to create the file for writing: %s\n", err)
+		return "", errors.New(msg)
+	}
+	defer out.Close()
+	// Add name of new file
+	filenames = append(filenames, fileName)
+	// Write the content from POSTed file to the out
+	fmt.Println("Transferring file: ", out.Name())
+	progressBar.Prefix(out.Name())
+	progressBar.Start()
+	buf := make([]byte, 1024)
+	for {
+		// Read a chunk
+		n, err := part.Read(buf)
+		if err != nil && err != io.EOF {
+			msg := fmt.Sprintf("Unable to write file to disk: %v", err)
+			return "", errors.New(msg)
+		}
+		if n == 0 {
+			break
+		}
+		// Write a chunk
+		if _, err := out.Write(buf[:n]); err != nil {
+			// Output to server
+			msg := fmt.Sprintf("Unable to write file to disk: %v", err)
+			return "", errors.New(msg)
+		}
+		progressBar.Add(n)
+	}
+	return out.Name(), nil
+}
+
 // New instance of the server
 func New(cfg *config.Config) (*Server, error) {
 	app := &Server{}
@@ -139,8 +185,10 @@ func New(cfg *config.Config) (*Server, error) {
 	// Gracefully shutdown when an OS signal is received
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt)
+	signal.Notify(sig, syscall.SIGQUIT)
 	go func() {
 		<-sig
+		fmt.Print("OS signal received")
 		app.stopChannel <- true
 	}()
 	// The handler adds and removes from the sync.WaitGroup
@@ -212,58 +260,29 @@ func New(cfg *config.Config) (*Server, error) {
 				if err == io.EOF {
 					break
 				}
-				// iIf part.FileName() is empty, skip this iteration.
+				if part == nil {
+					msg := fmt.Sprint("part is nil")
+					log.Print(msg)
+					continue
+				}
+				// If part.FileName() is empty, skip this iteration.
 				if part.FileName() == "" {
 					continue
 				}
-				// Prepare the destination
-				fileName := getFileName(part.FileName(), filenames)
-				out, err := os.Create(filepath.Join(app.outputDir, fileName))
+				fileName, err := receiveFile(app, part, filenames, progressBar)
 				if err != nil {
-					// Output to server
-					fmt.Fprintf(w, "Unable to create the file for writing: %s\n", err)
-					// Output to console
-					log.Printf("Unable to create the file for writing: %s\n", err)
+					msg := fmt.Sprintf("%s\n", err)
 					// Send signal to server to shutdown
+					_, err := fmt.Fprint(w, msg)
+					if err != nil {
+						_, _ = fmt.Fprint(os.Stderr, msg)
+					}
+					// Output to console
+					log.Print(msg)
 					app.stopChannel <- true
 					return
 				}
-				defer out.Close()
-				// Add name of new file
-				filenames = append(filenames, fileName)
-				// Write the content from POSTed file to the out
-				fmt.Println("Transferring file: ", out.Name())
-				progressBar.Prefix(out.Name())
-				progressBar.Start()
-				buf := make([]byte, 1024)
-				for {
-					// Read a chunk
-					n, err := part.Read(buf)
-					if err != nil && err != io.EOF {
-						// Output to server
-						fmt.Fprintf(w, "Unable to write file to disk: %v", err)
-						// Output to console
-						fmt.Printf("Unable to write file to disk: %v", err)
-						// Send signal to server to shutdown
-						app.stopChannel <- true
-						return
-					}
-					if n == 0 {
-						break
-					}
-					// Write a chunk
-					if _, err := out.Write(buf[:n]); err != nil {
-						// Output to server
-						fmt.Fprintf(w, "Unable to write file to disk: %v", err)
-						// Output to console
-						log.Printf("Unable to write file to disk: %v", err)
-						// Send signal to server to shutdown
-						app.stopChannel <- true
-						return
-					}
-					progressBar.Add(n)
-				}
-				transferredFiles = append(transferredFiles, out.Name())
+				transferredFiles = append(transferredFiles, fileName)
 			}
 			progressBar.FinishPrint("File transfer completed")
 			// Set the value of the variable to the actually transferred files
