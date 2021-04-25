@@ -18,6 +18,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&pathFlag, "path", "", "path to use. Defaults to a random string")
 	rootCmd.PersistentFlags().StringVarP(&interfaceFlag, "interface", "i", "", "network interface to use for the server")
 	rootCmd.PersistentFlags().StringVarP(&fqdnFlag, "fqdn", "d", "", "fully-qualified domain name to use for the resulting URLs")
+	rootCmd.PersistentFlags().StringVarP(&hostportFlag, "hostport", "D", "", "host and port to accept really FQDN")
 	rootCmd.PersistentFlags().BoolVarP(&zipFlag, "zip", "z", false, "zip content before transferring")
 	rootCmd.PersistentFlags().StringVarP(&configFlag, "config", "c", "", "path to the config file, defaults to $XDG_CONFIG_HOME/qrcp/config.json")
 	rootCmd.PersistentFlags().BoolVarP(&browserFlag, "browser", "b", false, "display the QR code in a browser window")
@@ -36,6 +37,7 @@ var outputFlag string
 var keepaliveFlag bool
 var quietFlag bool
 var fqdnFlag string
+var hostportFlag string
 var pathFlag string
 var listallinterfacesFlag bool
 var configFlag string

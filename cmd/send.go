@@ -25,6 +25,7 @@ func sendCmdFunc(command *cobra.Command, args []string) error {
 		Port:              portFlag,
 		Path:              pathFlag,
 		FQDN:              fqdnFlag,
+		Hostport:          hostportFlag,
 		KeepAlive:         keepaliveFlag,
 		ListAllInterfaces: listallinterfacesFlag,
 		Secure:            secureFlag,

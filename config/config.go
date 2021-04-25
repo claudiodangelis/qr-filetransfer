@@ -18,6 +18,7 @@ import (
 // Config of qrcp
 type Config struct {
 	FQDN      string `json:"fqdn"`
+	Hostport  string `json:"hostport"`
 	Interface string `json:"interface"`
 	Port      int    `json:"port"`
 	KeepAlive bool   `json:"keepAlive"`
@@ -36,6 +37,7 @@ type Options struct {
 	Port              int
 	Path              string
 	FQDN              string
+	Hostport          string
 	KeepAlive         bool
 	Interactive       bool
 	ListAllInterfaces bool
@@ -194,6 +196,21 @@ func Wizard(path string, listAllInterfaces bool) error {
 			p, _ := filepath.Abs(promptOutputResultString)
 			cfg.Output = p
 		}
+	}
+
+	validateHostport := func(input string) error {
+		if input != "" && govalidator.IsDialString(input) == false {
+			return errors.New("invalid host and port")
+		}
+		return nil
+	}
+	promptHostport := promptui.Prompt{
+		Validate: validateHostport,
+		Label:    "Choose replace host and port",
+		Default:  "",
+	}
+	if promptHostportResultString, err := promptHostport.Run(); err == nil {
+		cfg.Hostport = promptHostportResultString
 	}
 
 	// Ask for path

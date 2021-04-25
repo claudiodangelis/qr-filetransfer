@@ -129,7 +129,9 @@ func New(cfg *config.Config) (*Server, error) {
 		hostname = fmt.Sprintf("%s:%d", extIP.String(), port)
 	}
 	// Use a fully-qualified domain name if set
-	if cfg.FQDN != "" {
+	if cfg.Hostport != "" {
+		hostname = cfg.Hostport
+	} else if cfg.FQDN != "" {
 		hostname = fmt.Sprintf("%s:%d", cfg.FQDN, port)
 	}
 	// Set URLs
