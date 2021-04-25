@@ -46,11 +46,11 @@ _Note: it requires go 1.8_
 
 ## Linux
 
-Download the latest Linux .tar.gz archive from the [Releases](https://github.com/claudiodangelis/qrcp/releases) page, extract it, move the binary to the proper directory, then set execution permissions.
+Download the latest Linux .tar.gz archive from the [Releases](https://github.com/claudiodangelis/qrcp/releases/latest) page, extract it, move the binary to the proper directory, then set execution permissions.
 
 ```sh
 # Extract the archive
-tar xf qrcp_0.5.0_linux_x86_64.tar.gz
+tar xf qrcp*
 # Copy the binary
 sudo mv qrcp /usr/local/bin
 # Set execution permissions
