@@ -241,7 +241,7 @@ func New(cfg *config.Config) (*Server, error) {
 					continue
 				}
 				// Prepare the destination
-				fileName := getFileName(part.FileName(), filenames)
+				fileName := getFileName(sanitizeFileName(part.FileName()), filenames)
 				out, err := os.Create(filepath.Join(app.outputDir, fileName))
 				if err != nil {
 					// Output to server

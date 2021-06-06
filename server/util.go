@@ -5,6 +5,8 @@ import (
 	"html/template"
 	"io"
 	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -35,4 +37,18 @@ func getFileName(newFilename string, fileNamesInTargetDir []string) string {
 		i++
 	}
 	return newFilename
+}
+
+func sanitizeFileName(fileName string) string {
+	replStr := "_"
+	switch runtime.GOOS {
+	case "windows":
+		// Replace the characters reserved by Windows
+		// Reference: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
+		re := regexp.MustCompile(`[<>:"/\\|?*]`)
+		return re.ReplaceAllLiteralString(fileName, replStr)
+	default:
+		// Replace the path separator character
+		return strings.Replace(fileName, string(filepath.Separator), replStr, -1)
+	}
 }
