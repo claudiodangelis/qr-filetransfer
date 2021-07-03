@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/claudiodangelis/qrcp/config"
 	"github.com/claudiodangelis/qrcp/logger"
@@ -47,6 +48,7 @@ func sendCmdFunc(command *cobra.Command, args []string) error {
 	if browserFlag {
 		srv.DisplayQR(srv.SendURL)
 	}
+	shutdownCh := make(chan struct{}, 1)
 	if err := keyboard.Open(); err == nil {
 		defer func() {
 			keyboard.Close()
@@ -55,12 +57,22 @@ func sendCmdFunc(command *cobra.Command, args []string) error {
 			for {
 				char, key, _ := keyboard.GetKey()
 				if string(char) == "q" || key == keyboard.KeyCtrlC {
+					shutdownCh <- struct{}{}
 					srv.Shutdown()
 				}
 			}
 		}()
 	} else {
 		log.Print(fmt.Sprintf("Warning: keyboard not detected: %v", err))
+	}
+outLoop:
+	for {
+		select {
+		case <-shutdownCh:
+			break outLoop
+		default:
+			time.Sleep(time.Millisecond * 500)
+		}
 	}
 	if err := srv.Wait(); err != nil {
 		return err
