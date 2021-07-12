@@ -119,6 +119,14 @@ sudo chmod +x /usr/local/bin/qrcp
 # Confirm it's working:
 qrcp --help
 ```
+
+### Homebrew
+
+If you use [Homebrew](https://brew.sh) for package management on macOS, you can install qrcp with the following one-liner:
+
+```
+brew install qrcp
+```
     
 # Usage
 
